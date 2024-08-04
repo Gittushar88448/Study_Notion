@@ -50,3 +50,22 @@ exports.isAdmin = async(req, res, next) =>{
         });
     }
 }
+// IsInstructor Autherization
+
+exports.isInstructor = async(req, res, next) =>{
+    try{
+        if(req.user.accountType !== "Instructor"){
+            return res.status(401).json({
+                success: false,
+                message: "protected route only for Instructor"
+            });
+        }
+        next();
+    }catch(error){
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: "user role can not be varified"
+        });
+    }
+}
