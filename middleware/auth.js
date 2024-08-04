@@ -31,3 +31,22 @@ exports.auth = async(req, res , next) =>{
         })
     }
 }
+// IsAdmin Autherization
+
+exports.isAdmin = async(req, res, next) =>{
+    try{
+        if(req.user.accountType !== "Admin"){
+            return res.status(401).json({
+                success: false,
+                message: "protected route only for Admin"
+            });
+        }
+        next();
+    }catch(error){
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: "user role can not be varified"
+        });
+    }
+}
