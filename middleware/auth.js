@@ -69,3 +69,22 @@ exports.isInstructor = async(req, res, next) =>{
         });
     }
 }
+// IsStudent Autherization
+
+exports.isStudent = async(req, res, next) =>{
+    try{
+        if(req.user.accountType !== "Student"){
+            return res.status(401).json({
+                success: false,
+                message: "protected route only for Student"
+            });
+        }
+        next();
+    }catch(error){
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: "user role can not be varified"
+        });
+    }
+}
