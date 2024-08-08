@@ -235,3 +235,81 @@ exports.login = async (req, res) => {
     }
 }
 
+
+// ChangePassword
+exports.changePassword = async (req, res) => {
+    try {
+        const { oldPassword, newPassword, confirmPassword } = req.body;
+        const userId = req.user.id;
+
+        // validate 
+        if (!oldPassword || !newPassword || !confirmPassword) {
+            return res.json({
+                success: false,
+                message: "Please fill all the details",
+            })
+        } else if (newPassword !== confirmPassword) {
+            return res.status(401).json({
+                success: false,
+                message: "Password not matched",
+            });
+        }
+
+        const user = await User.findById(userId);
+
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User details not found",
+            });
+        }
+
+
+        if (await bcrypt.compare(oldPassword, user.password)) {
+
+            const hashedPassword = bcrypt.hash(newPassword, 10);
+
+            const updatedUserDetails = await User.findByIdAndUpdate(
+                { _id: userId },
+                { password: hashedPassword },
+                { new: true }
+            );
+            // Send notification email
+            try {
+                const emailResponse = await mailSender(
+                    updatedUserDetails.email,
+                    "Password Updated Successfully",
+                    passwordUpdated(
+                        updatedUserDetails.email,
+                        `Password updated successfully for ${updatedUserDetails.firstName} ${updatedUserDetails.lastName}`
+                    )
+                );
+                console.log("Email sent successfully:", emailResponse.response);
+            } catch (error) {
+                // If there's an error sending the email, log the error and return a 500 (Internal Server Error) error
+                console.error("Error occurred while sending email:", error);
+                return res.status(500).json({
+                    success: false,
+                    message: "Error occurred while sending email",
+                    error: error.message,
+                });
+            }
+        } else {
+            return res.status(401).json({
+                success: false,
+                message: "password is incorrect"
+            })
+        }
+        res.status(200).json({
+            success: true,
+            message: "Password changed successfully"
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: "something went wrong while changing password"
+        })
+    }
+}
