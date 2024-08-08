@@ -169,3 +169,69 @@ exports.signup = async (req, res) => {
         });
     }
 }
+// Login
+exports.login = async (req, res) => {
+    try {
+        // fetching data from request's body
+        const { email, password } = req.body;
+
+        // Validate data
+        if (!email || !password) {
+            return res.json({
+                success: false,
+                message: "Please fill all the details"
+            });
+        }
+        // fetching user details exists in db or not
+        const user = await User.findOne({ email }).populate('additionalDetails');
+
+        // if user details not present
+        if (!user) {
+            return res.status(409).json({
+                success: false,
+                message: "User is not registered , Please first registered yourself",
+            })
+        }
+
+
+        if (await bcrypt.compare(password, user.password)) {
+
+            const payload = {
+                email: user.email,
+                id: user._id,
+                accountType: user.accountType,
+            }
+
+            const token = jwt.sign(payload, process.env.JWT_SECRET, {
+                expiresIn: "2h",
+            });
+
+            user.token = token;
+            user.password = undefined;
+
+            const options = {
+                expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+                httpOnly: true,
+            }
+
+            res.cookie("token", token, options).status(200).json({
+                success: true,
+                token,
+                user,
+                message: "Cookie has been sent successfully"
+            })
+        } else {
+            return res.json({
+                success: false,
+                message: "Password incorrect"
+            })
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: "something went wrong while login"
+        })
+    }
+}
+
