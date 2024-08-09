@@ -52,3 +52,36 @@ exports.updateProfile = async(req, res) =>{
 }
 
 
+
+// Delete Profile
+
+exports.removeProfile = async(req, res) =>{
+    try{
+        const userId = req.user.id;
+
+        // validate
+        if(!userId){
+            return res.json({
+                success: false,
+                message: "User id not found",
+            })
+        }
+        const user = await User.findById(userId);
+        const profileId = user.additionalDetails;
+
+        await Profile.findByIdAndDelete({_id:profileId});
+        await User.findByIdAndDelete(userId);
+
+        return res.status(200).json({
+            success: true,
+            message: "Removed user profile successfully",
+        })
+    }catch(error){
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: "Something went wrong while delete profile",
+            error: error.message
+        });
+    }
+}
