@@ -18,7 +18,7 @@ exports.sendOtp = async (req, res) => {
 
         // Validate email
         if (!email) {
-            res.json({
+            res.status(404).json({
                 success: false,
                 message: "please enter the email address"
             });
@@ -53,17 +53,18 @@ exports.sendOtp = async (req, res) => {
             })
             result = await OTP.findOne({ otp: otp });
         }
-        console.log(otp);
+        console.log("otp",otp);
 
         const otpPayload = { email, otp };
 
         // save entry to database
         const otpData = await OTP.create(otpPayload);
-        console.log(otpData);
+        console.log("otp schema entry created",otpData);
 
         res.status(200).json({
             success: true,
-            message: "OTP send successfully to the user"
+            message: "OTP send successfully to the user",
+            otpData
         });
 
     } catch (error) {
@@ -84,8 +85,8 @@ exports.signup = async (req, res) => {
         const { firstName, lastName, email, accountType, password, confirmPassword, otp, contactNumber } = req.body;
 
         // validate Information
-        if (!firstName || !lastName || !email || !password || !otp || !contactNumber) {
-            return res.json({
+        if (!firstName || !lastName || !email || !password || !confirmPassword || !otp ) {
+            return res.status(404).json({
                 success: false,
                 message: "Please fill all the details"
             })
@@ -95,13 +96,6 @@ exports.signup = async (req, res) => {
             return res.json({
                 success: false,
                 message: "password not matched"
-            });
-        }
-
-        if (contactNumber.length !== 10) {
-            return res.json({
-                success: false,
-                message: "Please enter the valid contact number",
             });
         }
 
@@ -135,7 +129,7 @@ exports.signup = async (req, res) => {
         }
 
         // password encrypting by 10 rounds
-        let hashedPassword = bcrypt.hash(password, 10);
+        let hashedPassword = await bcrypt.hash(password, 10);
 
         // creating null entry in profile schema
         const profileDetails = await Profile.create({
@@ -248,16 +242,20 @@ exports.changePassword = async (req, res) => {
                 success: false,
                 message: "Please fill all the details",
             })
-        } else if (newPassword !== confirmPassword) {
+        }
+        
+        // validate new password and  confirm password
+        if (newPassword !== confirmPassword) {
             return res.status(401).json({
                 success: false,
                 message: "Password not matched",
             });
         }
 
+        // Fetching user details on the basis of user id
         const user = await User.findById(userId);
 
-
+        // validate user 
         if (!user) {
             return res.status(404).json({
                 success: false,
@@ -265,7 +263,7 @@ exports.changePassword = async (req, res) => {
             });
         }
 
-
+        // Compare old password and new password
         if (await bcrypt.compare(oldPassword, user.password)) {
 
             const hashedPassword = bcrypt.hash(newPassword, 10);
@@ -275,6 +273,7 @@ exports.changePassword = async (req, res) => {
                 { password: hashedPassword },
                 { new: true }
             );
+            
             // Send notification email
             try {
                 const emailResponse = await mailSender(
