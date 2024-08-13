@@ -128,3 +128,65 @@ exports.getAllCourses = async (req, res) => {
     }
 }
 
+// get course details
+
+exports.getCourseDetails = async (req, res) => {
+
+    try {
+        const { courseId } = req.body;
+
+        const courseDetails = await Course.findById(courseId).populate(
+                                                {
+                                                    path: "instructor",
+                                                    populate: {
+                                                        path: "additionalDetails"
+                                                    }
+                                                }
+                                            ).populate(
+                                                {
+                                                    path: "courseContent",
+                                                    populate: {
+                                                        path: "subSection"
+                                                    }
+                                                }
+                                            ).populate(
+                                                {
+                                                    path: "ratingAndReview",
+                                                    populate: {
+                                                        path: "user",
+                                                        path: "course"
+                                                    }
+                                                }
+                                            ).populate(
+                                                {
+                                                    path: "category",
+                                                    populate: {
+                                                        path: "course"
+                                                    }
+                                                }
+                                            ).populate("studentEnrolled");
+
+
+
+        if(!courseDetails){
+            return res.status(404).json({
+                status: false,
+                message: "course details not found",
+                error: error.message,
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "course fetched successfully",
+            data: courseDetails
+        })
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            status: false,
+            message: "something went wrong while getting course details"
+        });
+    }
+}
