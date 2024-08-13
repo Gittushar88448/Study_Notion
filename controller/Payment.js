@@ -100,3 +100,108 @@ exports.capturePayment = async (req, res) => {
 }
 
 
+
+//verify Signature of Razorpay and Server
+exports.verifySignature = async (req, res) => {
+
+    try {
+        const webhookSecret = '1234567'
+        const signature = req.headers['x-razorpay-signature'];
+
+        // encrypts webhookSecret
+        const shasum = await Crypto.createHmac('sha256', webhookSecret);
+        shasum.update(JSON.stringify(req.body));
+        const digest = shasum.digest('hex');
+
+        if (digest === signature) {
+            console.log("Payment is Authorized");
+
+            // Get the Course id and user id from notes
+            const { courseId, userId } = req.body.payload.payment.entity.notes;
+
+            try {
+
+                // update course schema by adding user id into studentEnrolled field
+                const updatedEnrolledCourse = await Course.findByIdAndUpdate(
+                    { _id: courseId },
+                    { $push: { studentEnrolled: userId } },
+                    { new: true }
+                ).populate("studentEnrolled").exec();
+
+                console.log("Updated enrolled course ", updatedEnrolledCourse);
+
+                // Validate the update enrolled course
+                if (!updatedEnrolledCourse) {
+                    return res.status(500).json({
+                        success: false,
+                        message: "Failed to update course schema"
+                    });
+                }
+
+                // update User schema by adding course id into courses field
+                const updatedEnrolledStudent = await User.findByIdAndUpdate(
+                    { _id: userId },
+                    { $push: { courses: courseId } },
+                    { new: true }
+                ).populate("courses").exec();
+
+                console.log("Updated enrolled user ", updatedEnrolledStudent);
+
+                // validate the updated student schema
+                if (!updatedEnrolledStudent) {
+                    return res.status(500).json({
+                        success: false,
+                        message: "Failed to update user schema"
+                    });
+                }
+
+                // Increment the 'sold' count by 1
+                const updatedCourse = await Course.findByIdAndUpdate(
+                    courseId,
+                    { $inc: { sold: 1 } }, // Increment the 'sold' field by 1
+                    { new: true } // Return the updated document
+                );
+
+                if (!updatedCourse) {
+                    return res.status(404).json({
+                        success: false,
+                        message: "course not update"
+                    })
+                }
+
+                // mail send
+                const emailResponse = await mailSender(
+                    updatedEnrolledStudent.email,
+                    'Congratulations from StudyNotion',
+                    courseEnrollmentEmail(updatedEnrolledCourse.courseName, updatedEnrolledStudent.firstName)
+                );
+
+                console.log(emailResponse);
+                return res.status(200).json({
+                    success: true,
+                    message: "Signature Verified and COurse Added",
+                });
+
+            } catch (error) {
+                console.error(error);
+                res.status(500).json({
+                    success: false,
+                    error: error.message
+                })
+            }
+
+        } else {
+            return res.status(500).json({
+                success: false,
+                message: "signature not verified"
+            })
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: "something went wrong while verifying signature",
+            error: error.message
+        })
+    }
+}
