@@ -101,4 +101,30 @@ exports.createCourse = async (req, res) => {
 
 }
 
+// Getting all courses
+
+exports.getAllCourses = async (req, res) => {
+    try {
+        const allCourse = await Course.find({}, {
+            courseName: true,
+            price: true,
+            thumbnail: true,
+            instructor: true,
+            ratingAndReview: true,
+            studentEnrolled: true,
+        }).populate("instructor").populate('ratingAndReview');
+
+        res.status(200).json({
+            success: true,
+            message: "getting all the course successfully",
+            allCourse,
+        })
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            status: false,
+            message: "something went wrong while getting all courses"
+        });
+    }
+}
 
