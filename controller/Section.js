@@ -50,3 +50,43 @@ exports.createSection = async (req, res) => {
 }
 
 
+// update Course section
+
+exports.updateSection = async (req, res) => {
+    try {
+        const { sectionName, sectionId } = req.body;
+
+        if (!sectionName || !sectionId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please enter all the details carefully"
+            });
+        }
+
+        const updateData = await Section.findByIdAndUpdate(
+            { _id:sectionId },
+            { sectionName: sectionName },
+            { new: true })
+            .populate({
+                path: 'subSection'
+            }
+            ).exec();
+
+        console.log(updateData);
+
+        return res.status(200).json({
+            success: true,
+            message: "section updated successfully",
+            updateData
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: "Something went wrong while updated section",
+            error: error.message
+        });
+    }
+}
+
