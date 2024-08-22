@@ -132,3 +132,32 @@ exports.getAllReviewsAndRatings = async(req, res) =>{
         });
     }
 }
+
+exports.getEnrolledCourses = async(req, res) =>{
+    try{
+        const id = req.user.id;
+
+        const userDetails = await User.findById(id).populate('courses').exec();
+
+        if(!userDetails){
+            return res.status(404).json({
+                success: false,
+                message: "User data not found"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Data found successfully",
+            data: userDetails.courses
+        })
+
+    }catch(error){
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: "Something went wrong while getting enrolled courses of particular student",
+            error: error.message
+    })
+    }
+}
