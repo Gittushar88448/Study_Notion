@@ -90,3 +90,34 @@ exports.updateSection = async (req, res) => {
     }
 }
 
+// Delete section
+
+exports.deleteSection = async (req, res) => {
+    try {
+        // Assuming that we are sending id into params
+        const {sectionId, courseId} = req.body;
+
+        await Course.findByIdAndUpdate(
+            {_id: courseId},
+            {$pull: {courseContent: sectionId}},
+            {new: true}
+        )
+
+        await Section.findByIdAndDelete({_id:sectionId});
+
+        return res.status(200).json({
+            success: true,
+            message: "Section deleted successfully"
+        });
+
+    } catch (error) {
+
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: "something went wrong while delete section",
+            error: error.message,
+        })
+        
+    }
+}
